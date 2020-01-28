@@ -7,6 +7,7 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
 app.use(express.static(path.join(__dirname, "public")));
+app.use(express.urlencoded({extended: true}));
 
 const accountData = fs.readFileSync(path.join(__dirname, "json/accounts.json"), {encoding: 'UTF8'});
 const accounts = JSON.parse(accountData);
@@ -31,6 +32,45 @@ app.get('/credit', function(req, resp) {
 
 app.get('/profile', function(req, resp) {
     resp.render('profile', {user: users[0]});
+});
+
+app.get('/transfer', function(req, resp) {
+    resp.render('transfer');
+});
+
+app.post('/transfer', function(req, resp) {
+    const from = req.body.from;
+    const to = req.body.to;
+    const amount = parseInt(req.body.amount);
+    if (accounts[from].balance >= amount){
+        const balance = accounts[from].balance - amount;
+        accounts[from].balance = balance;
+        const toBalance = accounts[to].balance + amount;
+        accounts[to].balance = toBalance;
+        accountsJSON = JSON.stringify(accounts);
+        fs.writeFileSync(path.join(__dirname, "json/accounts.json"), accountsJSON, 'UTF8');
+        resp.render('transfer', {message: "Transfer Completed"});
+    } else {
+        resp.render('transfer', {message: "Transfer Failed"});
+    }
+    
+});
+
+app.get('/payment', function(req, resp) {
+    resp.render('payment', { account: accounts.credit });
+});
+
+app.post('/payment', function(req, resp) {
+    const amount = parseInt(req.body.amount);
+    const balance = accounts["credit"].balance - amount;
+    accounts["credit"].balance = balance;
+    const toBalance = accounts["credit"].available + amount;
+    accounts["credit"].available = toBalance;
+    accountsJSON = JSON.stringify(accounts);
+    fs.writeFileSync(path.join(__dirname, "json/accounts.json"), accountsJSON, 'UTF8');
+    resp.render('payment', { message: "Payment Successful", account: accounts.credit });
+
+    
 });
 
 app.listen(3000, () => console.log("PS Project Running on port 3000!"));
